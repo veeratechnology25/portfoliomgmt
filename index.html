@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#4361ee" />
+    <meta name="description" content="Portfolio Management System - Manage your projects, finance, and resources efficiently" />
+    <meta name="keywords" content="portfolio, management, projects, finance, resources, analytics" />
+    <meta name="author" content="Your Company Name" />
+    <meta name="robots" content="index, follow" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="PFMS" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    
+    <!-- Preconnect to Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    
+    <title>PFMS | Portfolio Management System</title>
+    
+    <!-- PWA support -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- iOS support -->
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    <meta name="apple-mobile-web-app-status-bar" content="#4361ee" />
+    
+    <!-- Theme color for browsers -->
+    <meta name="theme-color" content="#4361ee" />
+    
+    <!-- Windows 8/10/11 -->
+    <meta name="msapplication-TileColor" content="#4361ee" />
+    <meta name="msapplication-navbutton-color" content="#4361ee" />
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
+    
+    <style>
+      /* Critical CSS for initial load */
+      body {
+        margin: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: #f8fafc;
+        color: #1e293b;
+      }
+      
+      /* Prevent layout shift when scrollbar appears */
+      html {
+        overflow-y: scroll;
+      }
+      
+      /* Smooth scrolling */
+      html {
+        scroll-behavior: smooth;
+      }
+      
+      /* Remove focus outline for mouse users but keep for keyboard navigation */
+      :focus:not(:focus-visible) {
+        outline: none;
+      }
+      
+      /* For browsers that don't support :focus-visible */
+      :focus:not(:-moz-focusring-visible) {
+        outline: none;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>
+      <div style="text-align: center; padding: 2rem;">
+        <h2>JavaScript is disabled</h2>
+        <p>Please enable JavaScript to run this application.</p>
+      </div>
+    </noscript>
+    
+    <div id="root"></div>
+    
+    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Load service worker for PWA -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(registration => {
+              console.log('ServiceWorker registration successful');
+            })
+            .catch(err => {
+              console.log('ServiceWorker registration failed: ', err);
+            });
+        });
+      }
+    </script>
+  </body>
+</html>
