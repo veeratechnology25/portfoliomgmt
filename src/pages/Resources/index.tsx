@@ -512,6 +512,11 @@ const handleCreateTeamMember = async () => {
       loadAllocationDropdowns();
       setAllocationDialogOpen(true);
     }
+    else {
+      setAllocationForm(DEFAULT_ALLOCATION);
+                loadAllocationDropdowns();   // ✅ API CALLS
+                setAllocationDialogOpen(true);
+    }
   }}
 >
   {activeTab === 'team'
