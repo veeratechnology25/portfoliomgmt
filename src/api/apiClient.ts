@@ -1,6 +1,6 @@
 import axios, { type AxiosError, type AxiosRequestConfig, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = 'https://portfoliomgmt-backend.vercel.app/api';
 
 // Extend the AxiosRequestConfig interface to include our custom _retry property
 declare module 'axios' {

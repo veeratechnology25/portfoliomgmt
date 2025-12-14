@@ -55,6 +55,7 @@ import {
   Cell,
 } from 'recharts';
 import { format, differenceInDays } from 'date-fns';
+import ProjectFormDialog from '../Projects/ProjectFormDialog';
 
 // Sample data
 const recentProjects = [
@@ -163,6 +164,7 @@ const Dashboard = () => {
     totalRevenue: 280000,
     pendingApprovals: 3,
   });
+  const [openCreateProject, setOpenCreateProject] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -474,9 +476,21 @@ const Dashboard = () => {
             <Button variant="outlined" startIcon={<DownloadIcon />}>
               Export
             </Button>
-            <Button variant="contained" color="primary" startIcon={<AddIcon />}>
-              New Project
-            </Button>
+            <Button
+        variant="contained"
+        startIcon={<AddIcon />}
+        onClick={() => setOpenCreateProject(true)}
+      >
+        New Project
+      </Button>
+      <ProjectFormDialog
+        open={openCreateProject}
+        onClose={() => setOpenCreateProject(false)}
+        onSuccess={() => {
+          // optional: refresh dashboard stats
+        }}
+      />
+
           </Stack>
         </Box>
 
@@ -675,9 +689,13 @@ const Dashboard = () => {
               <Button variant="outlined" startIcon={<FilterIcon />}>
                 Filter
               </Button>
-              <Button variant="contained" color="primary" startIcon={<AddIcon />}>
-                New Project
-              </Button>
+              <Button
+        variant="contained"
+        startIcon={<AddIcon />}
+        onClick={() => setOpenCreateProject(true)}
+      >
+        New Project
+      </Button>
             </Stack>
           </Box>
           <Box sx={{ height: 400, width: '100%' }}>
@@ -869,6 +887,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </Box>
+
     </Box>
   );
 };

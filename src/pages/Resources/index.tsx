@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -53,6 +53,10 @@ import {
   Schedule as ScheduleIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
+
+import { projectService } from '../../api/projectService';
+import { employeeService } from '../../api/employeeService';
+import { resourceService } from '../../api/resourceService';
 
 type TabValue = 'team' | 'equipment' | 'allocations' | 'requests';
 
@@ -110,19 +114,49 @@ const Resources = () => {
     id: null,
     type: 'team',
   });
+  const [allocationDialogOpen, setAllocationDialogOpen] = useState(false);
+
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const DEFAULT_ALLOCATION = {
+    allocation_percentage: 0,
+    role: '',
+    status: 'active',
+    start_date: '',
+    end_date: '',
+    actual_start_date: null,
+    actual_end_date: null,
+    hourly_rate: '',
+    estimated_cost: '',
+    approved_date: null,
+    project: '',
+    employee: '',
+    approved_by: null,
+    created_by: null,
+  };
+  const [allocationForm, setAllocationForm] = useState<any>(DEFAULT_ALLOCATION);
+  const [projectsList, setProjectsList] = useState<any[]>([]);
+  const [employeesList, setEmployeesList] = useState<any[]>([]);
+  const [teamData, setTeamData] = useState<any[]>([]);
+  const [loadingTeam, setLoadingTeam] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'team') {
+      fetchTeamMembers();
+    }
+  }, [activeTab]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: TabValue) => {
     setActiveTab(newValue);
   };
 
   // Sample data
-  const teamData: TeamMember[] = [
-    { id: 1, name: 'John Doe', email: 'john@company.com', role: 'Senior Developer', department: 'Engineering', status: 'active', utilization: 85, projects: 3 },
-    { id: 2, name: 'Jane Smith', email: 'jane@company.com', role: 'UX Designer', department: 'Design', status: 'active', utilization: 70, projects: 2 },
-    { id: 3, name: 'Mike Johnson', email: 'mike@company.com', role: 'Project Manager', department: 'Management', status: 'on-leave', utilization: 40, projects: 1 },
-    { id: 4, name: 'Sarah Wilson', email: 'sarah@company.com', role: 'DevOps Engineer', department: 'Engineering', status: 'active', utilization: 95, projects: 4 },
-    { id: 5, name: 'Alex Brown', email: 'alex@company.com', role: 'QA Tester', department: 'Quality', status: 'inactive', utilization: 0, projects: 0 },
-  ];
+  // const teamData: TeamMember[] = [
+  //   { id: 1, name: 'John Doe', email: 'john@company.com', role: 'Senior Developer', department: 'Engineering', status: 'active', utilization: 85, projects: 3 },
+  //   { id: 2, name: 'Jane Smith', email: 'jane@company.com', role: 'UX Designer', department: 'Design', status: 'active', utilization: 70, projects: 2 },
+  //   { id: 3, name: 'Mike Johnson', email: 'mike@company.com', role: 'Project Manager', department: 'Management', status: 'on-leave', utilization: 40, projects: 1 },
+  //   { id: 4, name: 'Sarah Wilson', email: 'sarah@company.com', role: 'DevOps Engineer', department: 'Engineering', status: 'active', utilization: 95, projects: 4 },
+  //   { id: 5, name: 'Alex Brown', email: 'alex@company.com', role: 'QA Tester', department: 'Quality', status: 'inactive', utilization: 0, projects: 0 },
+  // ];
 
   const equipmentData: Equipment[] = [
     { id: 1, name: 'MacBook Pro', type: 'Laptop', model: 'M2 Pro', serial: 'MP12345', status: 'in-use', assignedTo: 'John Doe', purchaseDate: '2023-01-15', warranty: '2025-01-15' },
@@ -184,33 +218,40 @@ const Resources = () => {
     />
   );
 
-  const filteredTeamData = teamData.filter(member => {
-    const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         member.role.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || member.status === statusFilter;
+  const filteredTeamData = teamData.filter((member) => {
+    const fullName = `${member.first_name} ${member.last_name}`.toLowerCase();
+
+    const matchesSearch =
+      fullName.includes(searchTerm.toLowerCase()) ||
+      member.email?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (member.is_active ? 'active' : 'inactive') === statusFilter;
+
     return matchesSearch && matchesStatus;
   });
 
+
   const filteredEquipmentData = equipmentData.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.model.toLowerCase().includes(searchTerm.toLowerCase());
+      item.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.model.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const filteredAllocationData = allocationData.filter(allocation => {
     const matchesSearch = allocation.resource.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         allocation.project.toLowerCase().includes(searchTerm.toLowerCase());
+      allocation.project.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || allocation.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const filteredRequestData = requestData.filter(request => {
     const matchesSearch = request.requester.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.resourceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.project.toLowerCase().includes(searchTerm.toLowerCase());
+      request.resourceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      request.project.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -218,6 +259,7 @@ const Resources = () => {
   const handleDeleteClick = (id: number, type: TabValue) => {
     setDeleteDialog({ open: true, id, type });
   };
+
 
   const handleDeleteConfirm = () => {
     // Handle delete logic here
@@ -286,6 +328,70 @@ const Resources = () => {
     }
   };
 
+  const fetchTeamMembers = async () => {
+    try {
+      setLoadingTeam(true);
+      const res = await employeeService.getEmployees();
+
+      // API response: { results: [...] }
+      setTeamData(res.results || []);
+    } catch (error) {
+      console.error('Failed to load team members', error);
+    } finally {
+      setLoadingTeam(false);
+    }
+  };
+
+  const loadAllocationDropdowns = async () => {
+    try {
+      const [projectsRes, employeesRes] = await Promise.all([
+        projectService.getProjects(),
+        employeeService.getEmployees(),
+      ]);
+
+      setProjectsList(projectsRes.results || []);
+      setEmployeesList(employeesRes.results || []);
+    } catch (error) {
+      console.error('Failed to load allocation dropdown data', error);
+    }
+  };
+
+  const handleSaveAllocation = async () => {
+    try {
+      const payload = {
+        project: allocationForm.project,
+        employee: allocationForm.employee,
+        approved_by: allocationForm.approved_by || null,
+        allocation_percentage: allocationForm.allocation_percentage,
+        start_date: allocationForm.start_date,
+        end_date: allocationForm.end_date,
+        role: allocationForm.role,
+        status: allocationForm.status,
+        hourly_rate: allocationForm.hourly_rate
+          ? Number(allocationForm.hourly_rate)
+          : 0,
+        estimated_cost: allocationForm.estimated_cost
+          ? Number(allocationForm.estimated_cost)
+          : 0,
+      };
+
+      await resourceService.createAllocation(payload);
+
+      // ✅ Close dialog
+      setAllocationDialogOpen(false);
+
+      // ✅ Reset form
+      setAllocationForm(DEFAULT_ALLOCATION);
+
+      // ✅ Optional: refresh allocations list
+      // loadAllocations();
+
+    } catch (error) {
+      console.error('Failed to create allocation', error);
+    }
+  };
+
+
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Header */}
@@ -305,18 +411,24 @@ const Resources = () => {
             </Button>
             <Button
               variant="contained"
-              color="primary"
               startIcon={<AddIcon />}
-              onClick={() => console.log('Add new resource')}
+              onClick={() => {
+                setAllocationForm(DEFAULT_ALLOCATION);
+                loadAllocationDropdowns();   // ✅ API CALLS
+                setAllocationDialogOpen(true);
+              }}
             >
               Add Resource
             </Button>
+
+
+
           </Stack>
         </Box>
 
         {/* Statistics Cards - Using CSS Grid */}
-        <Box 
-          sx={{ 
+        <Box
+          sx={{
             display: 'grid',
             gridTemplateColumns: {
               xs: '1fr',
@@ -495,8 +607,8 @@ const Resources = () => {
                                 member.utilization > 90
                                   ? 'error'
                                   : member.utilization > 70
-                                  ? 'warning'
-                                  : 'success'
+                                    ? 'warning'
+                                    : 'success'
                               }
                               sx={{ height: 6, borderRadius: 3 }}
                             />
@@ -506,7 +618,7 @@ const Resources = () => {
                           </Box>
                         </TableCell>
                         <TableCell>
-                          {renderStatusChip(member.status)}
+                          {renderStatusChip(member.is_active ? 'active' : 'inactive')}
                         </TableCell>
                         <TableCell align="right">
                           <Stack direction="row" spacing={1} justifyContent="flex-end">
@@ -837,6 +949,207 @@ const Resources = () => {
           )}
         </Box>
       </Paper>
+
+      <Dialog
+        open={allocationDialogOpen}
+        onClose={() => setAllocationDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Resource Allocation</DialogTitle>
+
+        <DialogContent sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+
+          <TextField
+            label="Role"
+            required
+            value={allocationForm.role}
+            inputProps={{ maxLength: 100 }}
+            onChange={(e) =>
+              setAllocationForm({ ...allocationForm, role: e.target.value })
+            }
+          />
+
+          <TextField
+            label="Allocation Percentage"
+            type="number"
+            required
+            inputProps={{ min: 0, max: 100 }}
+            value={allocationForm.allocation_percentage}
+            onChange={(e) =>
+              setAllocationForm({
+                ...allocationForm,
+                allocation_percentage: Number(e.target.value),
+              })
+            }
+          />
+
+          <TextField
+            label="Start Date"
+            type="date"
+            required
+            InputLabelProps={{ shrink: true }}
+            value={allocationForm.start_date}
+            onChange={(e) =>
+              setAllocationForm({ ...allocationForm, start_date: e.target.value })
+            }
+          />
+
+          <TextField
+            label="End Date"
+            type="date"
+            required
+            InputLabelProps={{ shrink: true }}
+            value={allocationForm.end_date}
+            onChange={(e) =>
+              setAllocationForm({ ...allocationForm, end_date: e.target.value })
+            }
+          />
+
+          <TextField
+            label="Actual Start Date"
+            type="date"
+            InputLabelProps={{ shrink: true }}
+            value={allocationForm.actual_start_date || ''}
+            onChange={(e) =>
+              setAllocationForm({
+                ...allocationForm,
+                actual_start_date: e.target.value || null,
+              })
+            }
+          />
+
+          <TextField
+            label="Actual End Date"
+            type="date"
+            InputLabelProps={{ shrink: true }}
+            value={allocationForm.actual_end_date || ''}
+            onChange={(e) =>
+              setAllocationForm({
+                ...allocationForm,
+                actual_end_date: e.target.value || null,
+              })
+            }
+          />
+
+          <FormControl fullWidth>
+            <InputLabel>Status</InputLabel>
+            <Select
+              value={allocationForm.status}
+              label="Status"
+              onChange={(e) =>
+                setAllocationForm({ ...allocationForm, status: e.target.value })
+              }
+            >
+              {['active', 'completed', 'upcoming', 'cancelled', 'on_hold', 'approved'].map(
+                (s) => (
+                  <MenuItem key={s} value={s}>{s}</MenuItem>
+                )
+              )}
+            </Select>
+          </FormControl>
+
+          <TextField
+            label="Hourly Rate"
+            value={allocationForm.hourly_rate}
+            onChange={(e) =>
+              setAllocationForm({ ...allocationForm, hourly_rate: e.target.value })
+            }
+          />
+
+          <TextField
+            label="Estimated Cost"
+            value={allocationForm.estimated_cost}
+            onChange={(e) =>
+              setAllocationForm({ ...allocationForm, estimated_cost: e.target.value })
+            }
+          />
+
+          <TextField
+            label="Approved Date"
+            type="date"
+            InputLabelProps={{ shrink: true }}
+            value={allocationForm.approved_date || ''}
+            onChange={(e) =>
+              setAllocationForm({
+                ...allocationForm,
+                approved_date: e.target.value || null,
+              })
+            }
+          />
+
+          <FormControl fullWidth required>
+            <InputLabel>Project</InputLabel>
+            <Select
+              label="Project"
+              value={allocationForm.project}
+              onChange={(e) =>
+                setAllocationForm({ ...allocationForm, project: e.target.value })
+              }
+            >
+              {projectsList.map((project) => (
+                <MenuItem key={project.id} value={project.id}>
+                  {project.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+
+          <FormControl fullWidth required>
+            <InputLabel>Employee</InputLabel>
+            <Select
+              label="Employee"
+              value={allocationForm.employee}
+              onChange={(e) =>
+                setAllocationForm({ ...allocationForm, employee: e.target.value })
+              }
+            >
+              {employeesList.map((emp) => (
+                <MenuItem key={emp.id} value={emp.id}>
+                  {emp.first_name} {emp.last_name} ({emp.email})
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+
+
+          <FormControl fullWidth>
+            <InputLabel>Approved By</InputLabel>
+            <Select
+              label="Approved By"
+              value={allocationForm.approved_by || ''}
+              onChange={(e) =>
+                setAllocationForm({
+                  ...allocationForm,
+                  approved_by: e.target.value || null,
+                })
+              }
+            >
+              <MenuItem value="">
+                <em>None</em>
+              </MenuItem>
+
+              {employeesList.map((emp) => (
+                <MenuItem key={emp.id} value={emp.id}>
+                  {emp.first_name} {emp.last_name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+
+
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setAllocationDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleSaveAllocation}>
+            Save Allocation
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog

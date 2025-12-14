@@ -17,7 +17,7 @@ export interface Project {
 
 export const projectService = {
   // Get all projects
-  getProjects: async (): Promise<{ data: Project[] }> => {
+  getProjects: async (): Promise<{ results: Project[] }> => {
     const response = await apiClient.get('/projects/projects/');
     return response.data;
   },
