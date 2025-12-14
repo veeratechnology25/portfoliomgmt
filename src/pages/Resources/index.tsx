@@ -70,6 +70,15 @@ interface TeamMember {
   utilization: number;
   projects: number;
 }
+const TEAM_ROLES = [
+  'admin',
+  'manager',
+  'project_manager',
+  'team_lead',
+  'employee',
+  'finance',
+  'hr',
+] as const;
 
 interface Equipment {
   id: number;
@@ -109,14 +118,33 @@ const Resources = () => {
   const [activeTab, setActiveTab] = useState<TabValue>('team');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: number | null; type: TabValue }>({
-    open: false,
-    id: null,
-    type: 'team',
-  });
-  const [allocationDialogOpen, setAllocationDialogOpen] = useState(false);
+const [deleteDialog, setDeleteDialog] = useState<{
+  open: boolean;
+  id: string | number | null;
+  type: TabValue;
+}>({
+  open: false,
+  id: null,
+  type: 'team',
+});
 
+
+  const [allocationDialogOpen, setAllocationDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [teamDialogOpen, setTeamDialogOpen] = useState(false);
+const [editingTeamMember, setEditingTeamMember] = useState<any | null>(null);
+
+  const DEFAULT_TEAM_FORM = {
+    email: '',
+    username: '',
+    first_name: '',
+    last_name: '',
+    role: 'employee',
+    department: '',
+    phone: '',
+  };
+
+
   const DEFAULT_ALLOCATION = {
     allocation_percentage: 0,
     role: '',
@@ -138,6 +166,7 @@ const Resources = () => {
   const [employeesList, setEmployeesList] = useState<any[]>([]);
   const [teamData, setTeamData] = useState<any[]>([]);
   const [loadingTeam, setLoadingTeam] = useState(false);
+  const [teamForm, setTeamForm] = useState(DEFAULT_TEAM_FORM);
 
   useEffect(() => {
     if (activeTab === 'team') {
@@ -256,16 +285,44 @@ const Resources = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const handleDeleteClick = (id: number, type: TabValue) => {
-    setDeleteDialog({ open: true, id, type });
-  };
+const handleDeleteClick = (id: string | number, type: TabValue) => {
+  setDeleteDialog({ open: true, id, type });
+};
 
 
-  const handleDeleteConfirm = () => {
-    // Handle delete logic here
-    console.log('Delete item:', deleteDialog);
+const handleDeleteConfirm = async () => {
+  if (!deleteDialog.id) return;
+
+  try {
+    switch (deleteDialog.type) {
+      case 'team':
+        await employeeService.deleteUser(String(deleteDialog.id));
+        fetchTeamMembers(); // refresh team list
+        break;
+
+      case 'allocations':
+        await resourceService.deleteAllocation(String(deleteDialog.id));
+        // fetchAllocations(); // refresh allocations list
+        break;
+
+      case 'equipment':
+        // await equipmentService.deleteEquipment(String(deleteDialog.id));
+        break;
+
+      case 'requests':
+        // await resourceService.deleteResourceRequest(String(deleteDialog.id));
+        break;
+
+      default:
+        break;
+    }
+  } catch (error) {
+    console.error('Delete failed', error);
+  } finally {
     setDeleteDialog({ open: false, id: null, type: 'team' });
-  };
+  }
+};
+
 
   const handleDeleteCancel = () => {
     setDeleteDialog({ open: false, id: null, type: 'team' });
@@ -391,6 +448,37 @@ const Resources = () => {
     }
   };
 
+const handleCreateTeamMember = async () => {
+  try {
+    const payload = {
+      email: teamForm.email,
+      username: teamForm.username || null,
+      first_name: teamForm.first_name,
+      last_name: teamForm.last_name,
+      role: teamForm.role,
+      department: teamForm.department || null,
+      phone: teamForm.phone,
+    };
+
+    if (editingTeamMember) {
+      // ✅ UPDATE
+      await employeeService.updateUser(editingTeamMember.id, payload);
+    } else {
+      // ✅ CREATE
+      await employeeService.createUser(payload);
+    }
+
+    setTeamDialogOpen(false);
+    setEditingTeamMember(null);
+    setTeamForm(DEFAULT_TEAM_FORM);
+
+    fetchTeamMembers(); // refresh table
+  } catch (error) {
+    console.error('Failed to save team member', error);
+  }
+};
+
+
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -410,17 +498,28 @@ const Resources = () => {
               Export
             </Button>
             <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => {
-                setAllocationForm(DEFAULT_ALLOCATION);
-                loadAllocationDropdowns();   // ✅ API CALLS
-                setAllocationDialogOpen(true);
-              }}
-            >
-              Add Resource
-            </Button>
+  variant="contained"
+  startIcon={<AddIcon />}
+  onClick={() => {
+    if (activeTab === 'team') {
+      setEditingTeamMember(null);
+      setTeamForm(DEFAULT_TEAM_FORM);
+      setTeamDialogOpen(true);
+    }
 
+    if (activeTab === 'allocations') {
+      setAllocationForm(DEFAULT_ALLOCATION);
+      loadAllocationDropdowns();
+      setAllocationDialogOpen(true);
+    }
+  }}
+>
+  {activeTab === 'team'
+    ? 'Add Team Member'
+    : activeTab === 'allocations'
+    ? 'Add Allocation'
+    : 'Add Resource'}
+</Button>
 
 
           </Stack>
@@ -572,11 +671,11 @@ const Resources = () => {
                         <TableCell>
                           <Box display="flex" alignItems="center" gap={2}>
                             <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
-                              {member.name.charAt(0)}
+                              {member.first_name.charAt(0)}
                             </Avatar>
                             <Box>
                               <Typography variant="body1" fontWeight={500}>
-                                {member.name}
+                                {member.first_name}
                               </Typography>
                               <Typography variant="caption" color="textSecondary">
                                 {member.email}
@@ -623,9 +722,27 @@ const Resources = () => {
                         <TableCell align="right">
                           <Stack direction="row" spacing={1} justifyContent="flex-end">
                             <Tooltip title="Edit">
-                              <IconButton size="small">
-                                <EditIcon fontSize="small" />
-                              </IconButton>
+                              <IconButton
+  size="small"
+  onClick={() => {
+    setEditingTeamMember(member);
+
+    setTeamForm({
+      email: member.email || '',
+      username: member.username || '',
+      first_name: member.first_name || '',
+      last_name: member.last_name || '',
+      role: member.role || 'employee',
+      department: member.department || '',
+      phone: member.phone || '',
+    });
+
+    setTeamDialogOpen(true);
+  }}
+>
+  <EditIcon fontSize="small" />
+</IconButton>
+
                             </Tooltip>
                             <Tooltip title="Delete">
                               <IconButton
@@ -1150,6 +1267,102 @@ const Resources = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+
+      {/* team dialog  */}
+      <Dialog
+        open={teamDialogOpen}
+        onClose={() => setTeamDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+<DialogTitle>
+  {editingTeamMember ? 'Edit Team Member' : 'Add Team Member'}
+</DialogTitle>
+
+        <DialogContent
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 2,
+            mt: 1,
+          }}
+        >
+          <TextField
+            label="Email"
+            required
+            value={teamForm.email}
+            onChange={(e) =>
+              setTeamForm({ ...teamForm, email: e.target.value })
+            }
+          />
+
+          <TextField
+            label="Username"
+            value={teamForm.username}
+            onChange={(e) =>
+              setTeamForm({ ...teamForm, username: e.target.value })
+            }
+          />
+
+          <TextField
+            label="First Name"
+            value={teamForm.first_name}
+            onChange={(e) =>
+              setTeamForm({ ...teamForm, first_name: e.target.value })
+            }
+          />
+
+          <TextField
+            label="Last Name"
+            value={teamForm.last_name}
+            onChange={(e) =>
+              setTeamForm({ ...teamForm, last_name: e.target.value })
+            }
+          />
+
+          <FormControl fullWidth required>
+            <InputLabel>Role</InputLabel>
+            <Select
+              label="Role"
+              value={teamForm.role}
+              onChange={(e) =>
+                setTeamForm({ ...teamForm, role: e.target.value })
+              }
+            >
+              {TEAM_ROLES.map((role) => (
+                <MenuItem key={role} value={role}>
+                  {role.replace('_', ' ').toUpperCase()}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <TextField
+            label="Department (UUID)"
+            value={teamForm.department}
+            onChange={(e) =>
+              setTeamForm({ ...teamForm, department: e.target.value })
+            }
+          />
+
+          <TextField
+            label="Phone"
+            value={teamForm.phone}
+            onChange={(e) =>
+              setTeamForm({ ...teamForm, phone: e.target.value })
+            }
+          />
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setTeamDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleCreateTeamMember}>
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+
 
       {/* Delete Confirmation Dialog */}
       <Dialog
