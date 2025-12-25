@@ -1,6 +1,6 @@
 import axios, { type AxiosError, type AxiosRequestConfig, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 
-const API_BASE_URL = 'https://portfoliomgmt-backend.vercel.app/api';
+const API_BASE_URL = 'http://localhost:8000/api';
 
 // Extend the AxiosRequestConfig interface to include our custom _retry property
 declare module 'axios' {
@@ -51,14 +51,14 @@ apiClient.interceptors.request.use(
     }
     
     // Add CSRF token for non-GET requests and non-token endpoints
-    if (config.method?.toUpperCase() !== 'GET' && 
-        config.url !== '/token/' && 
-        config.url !== '/token/refresh/') {
-      const csrfToken = await getCSRFToken();
-      if (csrfToken && config.headers) {
-        config.headers['X-CSRFToken'] = csrfToken;
-      }
-    }
+    // if (config.method?.toUpperCase() !== 'GET' && 
+    //     config.url !== '/token/' && 
+    //     config.url !== '/token/refresh/') {
+    //   const csrfToken = await getCSRFToken();
+    //   if (csrfToken && config.headers) {
+    //     config.headers['X-CSRFToken'] = csrfToken;
+    //   }
+    // }
     
     return config;
   },
@@ -117,7 +117,7 @@ apiClient.interceptors.response.use(
 export const authAPI = {
   login: async (email: string, password: string) => {
     // Get CSRF token first
-    await getCSRFToken();
+    // await getCSRFToken();
     // Then make the login request
     return apiClient.post<{ 
       access: string; 
@@ -128,7 +128,7 @@ export const authAPI = {
   
   register: async <T = any>(userData: any) => {
     // Get CSRF token first
-    await getCSRFToken();
+    // await getCSRFToken();
     return apiClient.post<T>('/auth/register/', userData);
   },
     
